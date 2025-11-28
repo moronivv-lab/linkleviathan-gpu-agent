@@ -1,0 +1,152 @@
+[
+  {
+    "id": "gpu-001",
+    "provider": "Equinix",
+    "gpu": "H100",
+    "price_per_hour": 0.75,
+    "available_hours": 200,
+    "location": "US-East",
+    "memory_gb": 80,
+    "status": "available"
+  },
+  {
+    "id": "gpu-002",
+    "provider": "CoreWeave",
+    "gpu": "A100",
+    "price_per_hour": 0.60,
+    "available_hours": 500,
+    "location": "US-West",
+    "memory_gb": 80,
+    "status": "available"
+  },
+  {
+    "id": "gpu-003",
+    "provider": "HydroDC",
+    "gpu": "V100",
+    "price_per_hour": 0.50,
+    "available_hours": 300,
+    "location": "EU-London",
+    "memory_gb": 32,
+    "status": "available"
+  },
+  {
+    "id": "gpu-004",
+    "provider": "WindInfra",
+    "gpu": "H100",
+    "price_per_hour": 1.20,
+    "available_hours": 100,
+    "location": "US-Central",
+    "memory_gb": 80,
+    "status": "available"
+  },
+  {
+    "id": "gpu-005",
+    "provider": "EdgeAI",
+    "gpu": "A100",
+    "price_per_hour": 0.65,
+    "available_hours": 600,
+    "location": "Asia-Tokyo",
+    "memory_gb": 80,
+    "status": "available"
+  },
+  {
+    "id": "gpu-006",
+    "provider": "CloudForge",
+    "gpu": "V100",
+    "price_per_hour": 0.55,
+    "available_hours": 400,
+    "location": "EU-Frankfurt",
+    "memory_gb": 32,
+    "status": "available"
+  },
+  {
+    "id": "gpu-007",
+    "provider": "BudgetDC",
+    "gpu": "H100",
+    "price_per_hour": 0.09,
+    "available_hours": 1200,
+    "location": "Asia-Singapore",
+    "memory_gb": 80,
+    "status": "available"
+  },
+  {
+    "id": "gpu-008",
+    "provider": "IndieNet",
+    "gpu": "A6000",
+    "price_per_hour": 0.40,
+    "available_hours": 800,
+    "location": "US-East",
+    "memory_gb": 48,
+    "status": "available"
+  },
+  {
+    "id": "gpu-009",
+    "provider": "PowerHub",
+    "gpu": "V100",
+    "price_per_hour": 0.70,
+    "available_hours": 250,
+    "location": "US-West",
+    "memory_gb": 32,
+    "status": "available"
+  },
+  {
+    "id": "gpu-010",
+    "provider": "GameAI",
+    "gpu": "RTX4090",
+    "price_per_hour": 0.45,
+    "available_hours": 450,
+    "location": "US-Central",
+    "memory_gb": 24,
+    "status": "available"
+  },
+  {
+    "id": "gpu-011",
+    "provider": "AIHub",
+    "gpu": "A100",
+    "price_per_hour": 0.68,
+    "available_hours": 550,
+    "location": "EU-Amsterdam",
+    "memory_gb": 80,
+    "status": "available"
+  },
+  {
+    "id": "gpu-012",
+    "provider": "MegaCompute",
+    "gpu": "H100",
+    "price_per_hour": 0.85,
+    "available_hours": 300,
+    "location": "US-East",
+    "memory_gb": 80,
+    "status": "available"
+  },
+  {
+    "id": "gpu-013",
+    "provider": "TrainNet",
+    "gpu": "V100",
+    "price_per_hour": 0.58,
+    "available_hours": 350,
+    "location": "EU-Paris",
+    "memory_gb": 32,
+    "status": "available"
+  },
+  {
+    "id": "gpu-014",
+    "provider": "RenderPro",
+    "gpu": "RTX4090",
+    "price_per_hour": 0.38,
+    "available_hours": 900,
+    "location": "US-West",
+    "memory_gb": 24,
+    "status": "available"
+  },
+  {
+    "id": "gpu-015",
+    "provider": "ScaleAI",
+    "gpu": "H100",
+    "price_per_hour": 0.95,
+    "available_hours": 400,
+    "location": "US-Central",
+    "memory_gb": 80,
+    "status": "available"
+  }
+]
