@@ -238,21 +238,34 @@ def main():
         # Run escrow on JSON
         test_escrow(json.dumps(output.get('matches', [])))
 
-# Flask Web App for URL/Zapier
+# ---- Flask Web App for URL/Zapier ----
+from flask import Flask, request, jsonify
+
 app = Flask(__name__)
 
-@app.route('/run', methods=['POST'])
+@app.route("/ping", methods=["GET"])
+def ping():
+    """Simple health check."""
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/run", methods=["POST"])
 def webhook_run():
+    """
+    TEMP VERSION: just echo the query so we can debug.
+    """
+    
     try:
-        data = request.json or {}
-        query = data.get('query', '')
-        if not query:
-            return jsonify({'error': 'No query provided'}), 400
-        output = run_agent(query)
-        test_escrow(json.dumps(output.get('matches', [])))
-        return jsonify(output), 200
+        data = request.get_json() or {}
+        query = data.get("query")
+
+        return jsonify({
+            "received_query": query
+        }), 200
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     # Run as web app for deployment
