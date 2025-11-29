@@ -251,20 +251,22 @@ def ping():
 
 @app.route("/run", methods=["POST"])
 def webhook_run():
-    """
-    TEMP VERSION: just echo the query so we can debug.
-    """
-    
     try:
         data = request.get_json() or {}
-        query = data.get("query")
+        query = data.get("query", "")
 
-        return jsonify({
-            "received_query": query
-        }), 200
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+
+        # 👉 Your real agent:
+        output = run_agent(query)  # this should already exist in your file
+
+        # If output is already a dict/list, just return it:
+        return jsonify(output), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 if __name__ == "__main__":
