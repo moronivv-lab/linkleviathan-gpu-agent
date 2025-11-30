@@ -38,19 +38,32 @@ from flask import Flask, request, jsonify
 
 def load_gpu_resources(filepath: str = "mock_apis.json") -> list:
     """
-    Load GPU resources from a JSON file.
+    Load GPU resources from:
+    - local mock_apis.json (always)
+    - plus any live providers we have wired (e.g. Vast.ai)
     """
+    resources = []
+
+    # 1) Local mock data (your original behavior)
     try:
-        with open(filepath, "r") as file:
-            resources = json.load(file)
-            print(f"[INFO] Loaded {len(resources)} GPU resources from {filepath}")
-            return resources
+        with open(filepath, 'r') as file:
+            local_resources = json.load(file)
+            print(f"[INFO] Loaded {len(local_resources)} GPU resources from {filepath}")
+            resources.extend(local_resources)
     except FileNotFoundError:
         print(f"[ERROR] File not found: {filepath}")
-        raise
     except json.JSONDecodeError as e:
         print(f"[ERROR] Invalid JSON in {filepath}: {e}")
-        raise
+
+    # 2) Live provider(s): Vast.ai
+    try:
+        vast_resources = fetch_vast_resources()
+        resources.extend(vast_resources)
+    except Exception as e:
+        print(f"[WARN] Skipping Vast.ai due to error: {e}")
+
+    print(f"[INFO] Total combined resources: {len(resources)}")
+    return resources
 
 
 def parse_query(query: str) -> dict:
