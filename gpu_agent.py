@@ -38,29 +38,27 @@ from flask import Flask, request, jsonify
 
 def load_gpu_resources(filepath: str = "mock_apis.json") -> list:
     """
-    Load GPU resources from:
-    - local mock_apis.json (always)
-    - plus any live providers we have wired (e.g. Vast.ai)
+    Load GPU resources from local mock_apis.json + live Vast.ai offers.
     """
     resources = []
 
-    # 1) Local mock data (your original behavior)
+    # 1) Local mock file (your curated providers)
     try:
-        with open(filepath, 'r') as file:
-            local_resources = json.load(file)
-            print(f"[INFO] Loaded {len(local_resources)} GPU resources from {filepath}")
+        with open(filepath, "r") as f:
+            local_resources = json.load(f)
+            print(f"[INFO] Loaded {len(local_resources)} local GPU resources from {filepath}")
             resources.extend(local_resources)
     except FileNotFoundError:
-        print(f"[ERROR] File not found: {filepath}")
+        print(f"[WARN] Local file not found: {filepath} (continuing with remote sources only)")
     except json.JSONDecodeError as e:
-        print(f"[ERROR] Invalid JSON in {filepath}: {e}")
+        print(f"[WARN] Invalid JSON in {filepath}: {e}")
 
-    # 2) Live provider(s): Vast.ai
+    # 2) Live Vast.ai resources
     try:
-        vast_resources = fetch_vast_resources()
+        vast_resources = fetch_vast_resources(limit=50)
         resources.extend(vast_resources)
     except Exception as e:
-        print(f"[WARN] Skipping Vast.ai due to error: {e}")
+        print(f"[WARN] Could not fetch Vast.ai resources: {e}")
 
     print(f"[INFO] Total combined resources: {len(resources)}")
     return resources
