@@ -20,6 +20,8 @@ Usage (Web Mode for URL/Zapier):
     Call POST /run with {"query": "your query"}
 """
 
+import os
+import requests
 import json
 import hashlib
 import time
