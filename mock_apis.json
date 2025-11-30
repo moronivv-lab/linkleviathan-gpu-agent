@@ -28,8 +28,67 @@
     "location": "EU-London",
     "memory_gb": 32,
     "status": "available"
-  },
-  {
+  },{
+  "id": "gpu-101",
+  "provider": "LambdaLabs",
+  "gpu": "A100",
+  "memory_gb": 80,
+  "price_per_hour": 1.20,
+  "available_hours": 600,
+  "location": "US-West",
+  "status": "available"
+},
+{
+  "id": "gpu-102",
+  "provider": "RunPod",
+  "gpu": "RTX4090",
+  "memory_gb": 24,
+  "price_per_hour": 0.45,
+  "available_hours": 900,
+  "location": "EU-West",
+  "status": "available"
+},
+{
+  "id": "gpu-103",
+  "provider": "VastAI",
+  "gpu": "A6000",
+  "memory_gb": 48,
+  "price_per_hour": 0.39,
+  "available_hours": 700,
+  "location": "US-East",
+  "status": "available"
+},
+{
+  "id": "gpu-104",
+  "provider": "CoreWeave",
+  "gpu": "H100",
+  "memory_gb": 80,
+  "price_per_hour": 1.80,
+  "available_hours": 300,
+  "location": "EU-North",
+  "status": "available"
+},
+{
+  "id": "gpu-105",
+  "provider": "Akash",
+  "gpu": "A100",
+  "memory_gb": 80,
+  "price_per_hour": 0.95,
+  "available_hours": 1000,
+  "location": "Asia-East",
+  "status": "available"
+},
+{
+  "id": "gpu-106",
+  "provider": "io.net",
+  "gpu": "RTX4090",
+  "memory_gb": 24,
+  "price_per_hour": 0.32,
+  "available_hours": 1500,
+  "location": "Global",
+  "status": "available"
+},
+{
     "id": "gpu-004",
     "provider": "WindInfra",
     "gpu": "H100",
