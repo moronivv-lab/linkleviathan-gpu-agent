@@ -371,64 +371,6 @@ def format_match_result(resource: dict, rank: int, requirements: dict) -> dict:
     }
 
 
-def fetch_vast_resources() -> list:
-    """
-    Example: fetch live GPU offers from a real provider (e.g. Vast.ai).
-    This version is defensive:
-    - If there is no API key, it returns [].
-    - If the API call fails, it prints a warning and returns [].
-    You still keep your mock_apis.json as a fallback.
-    """
-    api_key = os.getenv("VAST_API_KEY")
-    if not api_key:
-        print("[WARN] VAST_API_KEY not set – skipping Vast.ai live data.")
-        return []
-
-    try:
-        # Example endpoint – adjust according to the provider's docs.
-        url = "https://console.vast.ai/api/v0/benchmarks/"  # or the search/instances endpoint they document
-        headers = {
-            "Authorization": f"Bearer {api_key}"
-        }
-
-        # For v1, we can keep params minimal and let your existing filter handle prices/gpu types.
-        params = {
-            # You can later add query filters here if the API supports them
-            # e.g. "gpu_name": "H100", "max_price": 1.0, ...
-        }
-
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-
-        resources = []
-
-        # You need to adjust this loop based on the actual JSON shape.
-        # Example shape: data might be { "offers": [ {...}, {...} ] } or { "data": [ ... ] }
-        offers = data.get("offers") or data.get("data") or []
-
-        for item in offers:
-            # TODO: inspect one response in logs to map real field names correctly.
-            # For now we assume these example keys – you will adjust them once you see real JSON.
-            resources.append({
-                "id": f"vast-{item.get('id')}",
-                "provider": "Vast.ai",
-                "gpu": item.get("gpu_name") or item.get("gpu_type", "Unknown"),
-                "price_per_hour": float(item.get("price_per_hour", 0)),
-                "available_hours": int(item.get("available_hours", 100)),
-                "location": item.get("location", "Unknown"),
-                "memory_gb": item.get("gpu_mem_gb") or item.get("mem_gb", None),
-                "status": "available",
-            })
-
-        print(f"[INFO] Loaded {len(resources)} live GPU resources from Vast.ai")
-        return resources
-
-    except Exception as e:
-        print(f"[WARN] Could not fetch Vast.ai resources: {e}")
-        return []
-
-
 def run_agent(query: str, top_n: int = 3) -> dict:
     """
     Main agent function.
