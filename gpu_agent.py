@@ -66,6 +66,84 @@ def load_gpu_resources(filepath: str = "mock_apis.json") -> list:
     return resources
 
 
+def fetch_vast_resources(limit: int = 20) -> list:
+    """
+    Fetch live GPU offers from Vast.ai and normalize them
+    into the same format as mock_apis.json.
+
+    Requires env var VAST_API_KEY to be set on Render.
+    """
+    api_key = os.getenv("VAST_API_KEY")
+    if not api_key:
+        print("[WARN] VAST_API_KEY not set; skipping Vast.ai resources.")
+        return []
+
+    url = "https://vast.ai/api/v0/bundles/public"
+    params = {
+        # basic filter: rentable GPU machines, sorted by score / price
+        "q": "gpu=true rentable=true verified=true",
+        "limit": limit,
+        "order": "score",
+        "dir": "desc",
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Vast.ai sometimes returns a list, sometimes a dict with "offers"/"instances"
+        if isinstance(data, list):
+            raw_offers = data
+        elif isinstance(data, dict):
+            raw_offers = (
+                data.get("offers")
+                or data.get("instances")
+                or data.get("machines")
+                or []
+            )
+        else:
+            print(f"[WARN] Unexpected Vast.ai response type: {type(data)}")
+            return []
+
+        resources = []
+        for item in raw_offers:
+            try:
+                resources.append({
+                    "id": f"vast-{item.get('id')}",
+                    "provider": "Vast.ai",
+                    # different keys exist depending on endpoint; we fall back safely
+                    "gpu": item.get("gpu_name")
+                            or item.get("gpu_name_str")
+                            or str(item.get("gpu_name", "GPU")),
+                    "price_per_hour": float(
+                        item.get("dph_total")
+                        or item.get("dph")
+                        or 0.0
+                    ),
+                    "available_hours": int(item.get("max_hours") or 720),
+                    "location": item.get("geoloc")
+                                or item.get("country")
+                                or "unknown",
+                    "memory_gb": item.get("gpu_ram")
+                                or item.get("memory_gb")
+                                or None,
+                    "status": "available",
+                })
+            except Exception as e:
+                print(f"[WARN] Skipping Vast.ai offer due to error: {e}")
+
+        print(f"[INFO] Loaded {len(resources)} Vast.ai resources")
+        return resources
+
+    except Exception as e:
+        print(f"[WARN] Could not fetch Vast.ai resources: {e}")
+        return []
+
+
 def parse_query(query: str) -> dict:
     """
     Parse a natural language query to extract GPU requirements.
