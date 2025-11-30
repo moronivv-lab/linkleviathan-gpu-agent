@@ -241,12 +241,35 @@ def main():
 # ---- Flask Web App for URL/Zapier ----
 from flask import Flask, request, jsonify
 
+from flask import Flask, request, jsonify
+import json  # if not already imported at the top
+
 app = Flask(__name__)
 
-@app.route("/ping", methods=["GET"])
-def ping():
-    """Simple health check."""
-    return jsonify({"status": "ok"}), 200
+@app.route("/run", methods=["POST"])
+def webhook_run():
+    """
+    Real endpoint: it takes the client's needs in `query`,
+    runs your GPU agent, and returns the full result as JSON.
+    """
+    try:
+        data = request.get_json() or {}
+        query = data.get("query", "")
+
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+
+        # 🔥 This is your real agent logic
+        output = run_agent(query)  # this should already exist above
+
+        # Optional: if you still have test_escrow and matches inside output
+        # test_escrow(json.dumps(output.get("matches", [])))
+
+        return jsonify(output), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 @app.route("/run", methods=["POST"])
