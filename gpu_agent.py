@@ -5,7 +5,8 @@ An AI brokerage agent that matches user GPU requirements with available resource
 
 Features:
 - Natural language query parsing (e.g., "150 H100 <$1")
-- Mock API data loading and filtering
+- Local mock API data loading and filtering
+- Live Vast.ai offers (if VAST_API_KEY is set)
 - ZK-proof stub generation (timestamp + SHA256 hash)
 - DePIN rewards calculation
 - JSON output format
@@ -40,7 +41,7 @@ def load_gpu_resources(filepath: str = "mock_apis.json") -> list:
     """
     Load GPU resources from local mock_apis.json + live Vast.ai offers.
     """
-    resources = []
+    resources: list = []
 
     # 1) Local mock file (your curated providers)
     try:
@@ -64,7 +65,7 @@ def load_gpu_resources(filepath: str = "mock_apis.json") -> list:
     return resources
 
 
-def fetch_vast_resources(limit: int = 20) -> list:
+def fetch_vast_resources(limit: int = 50) -> list:
     """
     Fetch live GPU offers from Vast.ai and normalize them
     into the same format as mock_apis.json.
@@ -76,7 +77,9 @@ def fetch_vast_resources(limit: int = 20) -> list:
         print("[WARN] VAST_API_KEY not set; skipping Vast.ai resources.")
         return []
 
+    # ✅ Correct API host
     url = "https://vast.ai/api/v0/bundles/public"
+
     params = {
         # basic filter: rentable GPU machines, sorted by score / price
         "q": "gpu=true rentable=true verified=true",
@@ -93,7 +96,7 @@ def fetch_vast_resources(limit: int = 20) -> list:
         resp.raise_for_status()
         data = resp.json()
 
-        # Vast.ai sometimes returns a list, sometimes a dict with "offers"/"instances"
+        # Vast.ai sometimes returns a list, sometimes a dict with "offers"/"instances"/"machines"
         if isinstance(data, list):
             raw_offers = data
         elif isinstance(data, dict):
@@ -107,7 +110,7 @@ def fetch_vast_resources(limit: int = 20) -> list:
             print(f"[WARN] Unexpected Vast.ai response type: {type(data)}")
             return []
 
-        resources = []
+        resources: list = []
         for item in raw_offers:
             try:
                 resources.append({
@@ -193,7 +196,7 @@ def filter_resources(resources: list, requirements: dict) -> list:
     """
     Filter GPU resources based on parsed requirements.
     """
-    matches = []
+    matches: list = []
     for resource in resources:
         # Skip non-available
         if "status" in resource and resource["status"] != "available":
@@ -397,10 +400,12 @@ def run_agent(query: str, top_n: int = 3) -> dict:
             output["message"] = "No matching GPU resources found."
             return output
 
-        # 2) Build the normal matches list (this is what you already had)
+        # 2) Build the normal matches list
         top_matches = matches[:top_n]
-        results = [format_match_result(res, i + 1, requirements)
-                   for i, res in enumerate(top_matches)]
+        results = [
+            format_match_result(res, i + 1, requirements)
+            for i, res in enumerate(top_matches)
+        ]
 
         output["showing"] = len(results)
         output["matches"] = results
@@ -430,7 +435,7 @@ def run_agent(query: str, top_n: int = 3) -> dict:
         return {
             "success": False,
             "error": str(e),
-            "query": query
+            "query": query,
         }
 
 
@@ -534,9 +539,6 @@ def webhook_run():
         # Call your real agent
         output = run_agent(query)
 
-        # Optional: run escrow simulation on the matches (logs only)
-        # test_escrow(json.dumps(output.get("matches", [])))
-
         return jsonify(output), 200
 
     except Exception as e:
@@ -551,6 +553,7 @@ def webhook_run():
 if __name__ == "__main__":
     # Console mode (for local testing in a terminal):
     main()
-    # If you ever want to run the HTTP server locally instead, comment main()
-    # above and uncomment this:
+    # For local HTTP server instead of console, comment main() above
+    # and uncomment this:
     # app.run(host="0.0.0.0", port=8080, debug=True)
+
