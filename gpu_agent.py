@@ -282,46 +282,64 @@ def format_match_result(resource: dict, rank: int, requirements: dict) -> dict:
 
 def run_agent(query: str, top_n: int = 3) -> dict:
     """
-    Main agent function used by both console and web.
+    Main agent function.
     """
     try:
+        # 1) Load resources and compute matches as before
         resources = load_gpu_resources()
         requirements = parse_query(query)
         matches = filter_resources(resources, requirements)
 
-        if not matches:
-            return {
-                "success": True,
-                "query": query,
-                "parsed_requirements": requirements,
-                "total_matches": 0,
-                "matches": [],
-                "message": "No matching GPU resources found.",
-            }
-
-        top_matches = matches[:top_n]
-        results = [
-            format_match_result(res, i + 1, requirements)
-            for i, res in enumerate(top_matches)
-        ]
-
-        output = {
+        # Base output structure
+        output: dict = {
             "success": True,
             "query": query,
             "parsed_requirements": requirements,
             "total_matches": len(matches),
-            "showing": len(results),
-            "matches": results,
+            "matches": [],
             "generated_at": datetime.now().isoformat(),
             "agent_version": "1.0.1",
         }
+
+        # No matches → return early
+        if not matches:
+            output["message"] = "No matching GPU resources found."
+            return output
+
+        # 2) Build the normal matches list (this is what you already had)
+        top_matches = matches[:top_n]
+        results = [format_match_result(res, i + 1, requirements)
+                   for i, res in enumerate(top_matches)]
+
+        output["showing"] = len(results)
+        output["matches"] = results
+
+        # 3) EXTRA: add flat fields for Zapier (best/second/third match)
+        def add_flat_match(prefix: str, match: dict):
+            res = match["resource"]
+            output[f"{prefix}_provider"] = res.get("provider")
+            output[f"{prefix}_gpu"] = res.get("gpu")
+            output[f"{prefix}_price_per_hour"] = res.get("price_per_hour")
+            output[f"{prefix}_location"] = res.get("location")
+            output[f"{prefix}_available_hours"] = res.get("available_hours")
+            output[f"{prefix}_memory_gb"] = res.get("memory_gb")
+            output[f"{prefix}_match_score"] = match.get("match_score")
+            output[f"{prefix}_rank"] = match.get("rank")
+
+        if len(results) >= 1:
+            add_flat_match("best_match", results[0])
+        if len(results) >= 2:
+            add_flat_match("second_match", results[1])
+        if len(results) >= 3:
+            add_flat_match("third_match", results[2])
+
         return output
 
     except Exception as e:
         return {
             "success": False,
             "error": str(e),
-            "query": query,
+            "query": query
         }
 
 
