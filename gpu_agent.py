@@ -239,10 +239,62 @@ def main():
         test_escrow(json.dumps(output.get('matches', [])))
 
 # ---- Flask Web App for URL/Zapier ----
-from flask import Flask, request, jsonify
+# ---- Flask Web App for URL/Zapier ----
 
-from flask import Flask, request, jsonify
-import json  # if not already imported at the top
+# We already imported Flask, request, jsonify at the top of the file
+
+app = Flask(__name__)
+
+@app.route("/", methods=["GET"])
+def health():
+    """
+    Simple health check so going to / in the browser doesn't show 404.
+    """
+    return jsonify({
+        "status": "ok",
+        "agent_version": "1.0.1"
+    }), 200
+
+
+@app.route("/run", methods=["POST"])
+def webhook_run():
+    """
+    Main endpoint for Zapier / Framer.
+    Expects JSON: { "query": "<client text>" }
+    Returns the full agent output as JSON.
+    """
+    try:
+        data = request.get_json() or {}
+        query = (data.get("query") or "").strip()
+
+        if not query:
+            return jsonify({
+                "success": False,
+                "error": "No query provided"
+            }), 400
+
+        # 🔥 Call your real agent
+        output = run_agent(query)
+
+        # Optional: run escrow simulation on the matches (prints in logs only)
+        # test_escrow(json.dumps(output.get("matches", [])))
+
+        return jsonify(output), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+if __name__ == "__main__":
+    # Console mode (for local testing in a terminal)
+    main()
+    # If you ever want to run the HTTP server locally instead of console mode,
+    # comment out main() above and uncomment this:
+    # app.run(host="0.0.0.0", port=8080, debug=True)
+
 
 app = Flask(__name__)
 
