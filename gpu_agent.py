@@ -5,8 +5,7 @@ An AI brokerage agent that matches user GPU requirements with available resource
 
 Features:
 - Natural language query parsing (e.g., "150 H100 <$1")
-- Local mock API data loading and filtering
-- Live Vast.ai offers (if VAST_API_KEY is set)
+- Mock API data loading and filtering
 - ZK-proof stub generation (timestamp + SHA256 hash)
 - DePIN rewards calculation
 - JSON output format
@@ -22,14 +21,14 @@ Usage (Web Mode for URL/Zapier):
 """
 
 import os
-import requests
 import json
 import hashlib
 import time
 import re
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
 
+import requests
 from flask import Flask, request, jsonify
 
 
@@ -37,27 +36,62 @@ from flask import Flask, request, jsonify
 # Data loading & core logic
 # ---------------------------
 
-def load_gpu_resources(filepath: str = "mock_apis.json") -> list:
+def load_local_resources(filepath: str = "mock_apis.json") -> List[dict]:
     """
-    Load GPU resources from local mock_apis.json + live Vast.ai offers.
+    Load GPU resources from your local mock_apis.json file.
+    This stays as a fallback + baseline.
     """
-    resources: list = []
-
-    # 1) Local mock file (your curated providers)
     try:
         with open(filepath, "r") as f:
-            local_resources = json.load(f)
-            print(f"[INFO] Loaded {len(local_resources)} local GPU resources from {filepath}")
-            resources.extend(local_resources)
+            resources = json.load(f)
+            print(f"[INFO] Loaded {len(resources)} local GPU resources from {filepath}")
+            return resources
     except FileNotFoundError:
-        print(f"[WARN] Local file not found: {filepath} (continuing with remote sources only)")
+        print(f"[WARN] Local file not found: {filepath}")
+        return []
     except json.JSONDecodeError as e:
         print(f"[WARN] Invalid JSON in {filepath}: {e}")
+        return []
 
-    # 2) Live Vast.ai resources
+
+def fetch_vast_resources(limit: int = 20) -> List[dict]:
+    """
+    PLACEHOLDER for Vast.ai live data.
+
+    Right now this function is SAFE: it just returns [] so your agent works.
+    When you (or a dev) have the official Vast.ai API docs, update this
+    function with the correct URL + mapping.
+
+    Steps later:
+      - Read Vast.ai API docs
+      - Replace the URL + params + parsing below
+      - Make sure to return a list of dicts with keys:
+        id, provider, gpu, price_per_hour, available_hours, location, memory_gb, status
+    """
+    api_key = os.getenv("VAST_API_KEY")
+    if not api_key:
+        print("[INFO] VAST_API_KEY not set – skipping Vast.ai live data.")
+        return []
+
+    # TODO: replace with the correct Vast.ai endpoint & mapping once you have docs.
+    print("[INFO] fetch_vast_resources is currently a placeholder (returns []).")
+    return []
+
+
+def load_gpu_resources() -> List[dict]:
+    """
+    Load ALL resources: local + external providers (when implemented).
+    """
+    resources: List[dict] = []
+
+    # 1) Local mock data
+    local = load_local_resources()
+    resources.extend(local)
+
+    # 2) Vast.ai (placeholder for now)
     try:
-        vast_resources = fetch_vast_resources(limit=50)
-        resources.extend(vast_resources)
+        vast = fetch_vast_resources(limit=50)
+        resources.extend(vast)
     except Exception as e:
         print(f"[WARN] Could not fetch Vast.ai resources: {e}")
 
@@ -65,85 +99,9 @@ def load_gpu_resources(filepath: str = "mock_apis.json") -> list:
     return resources
 
 
-def fetch_vast_resources(limit: int = 50) -> list:
-    """
-    Fetch live GPU offers from Vast.ai and normalize them
-    into the same format as mock_apis.json.
-
-    Requires env var VAST_API_KEY to be set on Render.
-    """
-    api_key = os.getenv("VAST_API_KEY")
-    if not api_key:
-        print("[WARN] VAST_API_KEY not set; skipping Vast.ai resources.")
-        return []
-
-    # ✅ Correct API host
-    url = "https://vast.ai/api/v0/bundles/public"
-
-    params = {
-        # basic filter: rentable GPU machines, sorted by score / price
-        "q": "gpu=true rentable=true verified=true",
-        "limit": limit,
-        "order": "score",
-        "dir": "desc",
-    }
-    headers = {
-        "Authorization": f"Bearer {api_key}"
-    }
-
-    try:
-        resp = requests.get(url, params=params, headers=headers, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-
-        # Vast.ai sometimes returns a list, sometimes a dict with "offers"/"instances"/"machines"
-        if isinstance(data, list):
-            raw_offers = data
-        elif isinstance(data, dict):
-            raw_offers = (
-                data.get("offers")
-                or data.get("instances")
-                or data.get("machines")
-                or []
-            )
-        else:
-            print(f"[WARN] Unexpected Vast.ai response type: {type(data)}")
-            return []
-
-        resources: list = []
-        for item in raw_offers:
-            try:
-                resources.append({
-                    "id": f"vast-{item.get('id')}",
-                    "provider": "Vast.ai",
-                    # different keys exist depending on endpoint; we fall back safely
-                    "gpu": item.get("gpu_name")
-                            or item.get("gpu_name_str")
-                            or str(item.get("gpu_name", "GPU")),
-                    "price_per_hour": float(
-                        item.get("dph_total")
-                        or item.get("dph")
-                        or 0.0
-                    ),
-                    "available_hours": int(item.get("max_hours") or 720),
-                    "location": item.get("geoloc")
-                                or item.get("country")
-                                or "unknown",
-                    "memory_gb": item.get("gpu_ram")
-                                or item.get("memory_gb")
-                                or None,
-                    "status": "available",
-                })
-            except Exception as e:
-                print(f"[WARN] Skipping Vast.ai offer due to error: {e}")
-
-        print(f"[INFO] Loaded {len(resources)} Vast.ai resources")
-        return resources
-
-    except Exception as e:
-        print(f"[WARN] Could not fetch Vast.ai resources: {e}")
-        return []
-
+# ---------------------------
+# Query parsing & matching
+# ---------------------------
 
 def parse_query(query: str) -> dict:
     """
@@ -192,11 +150,11 @@ def parse_query(query: str) -> dict:
     return result
 
 
-def filter_resources(resources: list, requirements: dict) -> list:
+def filter_resources(resources: List[dict], requirements: dict) -> List[dict]:
     """
     Filter GPU resources based on parsed requirements.
     """
-    matches: list = []
+    matches: List[dict] = []
     for resource in resources:
         # Skip non-available
         if "status" in resource and resource["status"] != "available":
@@ -227,6 +185,10 @@ def filter_resources(resources: list, requirements: dict) -> list:
     print(f"[INFO] Found {len(matches)} matching resources")
     return matches
 
+
+# ---------------------------
+# Scoring / proof / rewards
+# ---------------------------
 
 def generate_zk_proof_stub(resource: dict) -> dict:
     """
@@ -294,37 +256,6 @@ def calculate_depin_rewards(resource: dict, hours_requested: Optional[int] = Non
     }
 
 
-def test_escrow(matches_json: str, commission_rate: float = 0.15) -> None:
-    """
-    Mock Stripe escrow simulation with 10-15% commission.
-    Prints to console/logs only (not used in web response).
-    """
-    try:
-        matches = json.loads(matches_json)
-        if not matches:
-            print("No deal to escrow.")
-            return
-
-        first = matches[0]
-        deal_value = first["resource"]["price_per_hour"] * first.get(
-            "hours_requested",
-            first["resource"].get("available_hours", 100),
-        )
-        commission = deal_value * commission_rate
-        provider_share = deal_value - commission
-
-        print("\nEscrow Simulation:")
-        print(f"Deal Value: ${deal_value:.2f}")
-        print(
-            f"Provider Share: ${provider_share:.2f} "
-            f"({(1 - commission_rate) * 100:.0f}%)"
-        )
-        print(f"Your Commission: ${commission:.2f} ({commission_rate * 100:.0f}%)")
-        print("Client Payment Link (Test): https://buy.stripe.com/test")
-    except Exception as e:
-        print(f"Escrow error: {e}")
-
-
 def calculate_match_score(resource: dict, requirements: dict) -> float:
     """
     Calculate match score (0-100).
@@ -374,6 +305,41 @@ def format_match_result(resource: dict, rank: int, requirements: dict) -> dict:
     }
 
 
+def test_escrow(matches_json: str, commission_rate: float = 0.15) -> None:
+    """
+    Mock Stripe escrow simulation with 10-15% commission.
+    Prints to console/logs only (not used in web response).
+    """
+    try:
+        matches = json.loads(matches_json)
+        if not matches:
+            print("No deal to escrow.")
+            return
+
+        first = matches[0]
+        deal_value = first["resource"]["price_per_hour"] * first.get(
+            "hours_requested",
+            first["resource"].get("available_hours", 100),
+        )
+        commission = deal_value * commission_rate
+        provider_share = deal_value - commission
+
+        print("\nEscrow Simulation:")
+        print(f"Deal Value: ${deal_value:.2f}")
+        print(
+            f"Provider Share: ${provider_share:.2f} "
+            f"({(1 - commission_rate) * 100:.0f}%)"
+        )
+        print(f"Your Commission: ${commission:.2f} ({commission_rate * 100:.0f}%)")
+        print("Client Payment Link (Test): https://buy.stripe.com/test")
+    except Exception as e:
+        print(f"Escrow error: {e}")
+
+
+# ---------------------------
+# Agent core
+# ---------------------------
+
 def run_agent(query: str, top_n: int = 3) -> dict:
     """
     Main agent function.
@@ -402,10 +368,8 @@ def run_agent(query: str, top_n: int = 3) -> dict:
 
         # 2) Build the normal matches list
         top_matches = matches[:top_n]
-        results = [
-            format_match_result(res, i + 1, requirements)
-            for i, res in enumerate(top_matches)
-        ]
+        results = [format_match_result(res, i + 1, requirements)
+                   for i, res in enumerate(top_matches)]
 
         output["showing"] = len(results)
         output["matches"] = results
@@ -439,6 +403,10 @@ def run_agent(query: str, top_n: int = 3) -> dict:
         }
 
 
+# ---------------------------
+# Console helpers
+# ---------------------------
+
 def print_results(output: dict):
     """
     Pretty print results for console mode.
@@ -453,7 +421,7 @@ def print_results(output: dict):
 
     print(
         f"Found {output['total_matches']} matches, "
-        f"showing top {output['showing']}:"
+        f"showing top {output.get('showing', len(output['matches']))}:"
     )
 
     for match in output["matches"]:
@@ -553,7 +521,7 @@ def webhook_run():
 if __name__ == "__main__":
     # Console mode (for local testing in a terminal):
     main()
-    # For local HTTP server instead of console, comment main() above
-    # and uncomment this:
+    # If you ever want to run the HTTP server locally instead, comment main()
+    # above and uncomment this:
     # app.run(host="0.0.0.0", port=8080, debug=True)
 
